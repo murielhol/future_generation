@@ -17,7 +17,7 @@ class MockDataSet(Dataset):
         return self.number_of_examples
 
     def __getitem__(self, idx):
-        x = torch.rand(self.input_dim, self.sequence_length)
+        x = torch.rand(1, self.sequence_length, self.input_dim)
         y = torch.randint(low=0, high=9, size=(1,))
         return x, y
 
@@ -54,5 +54,35 @@ class TestWNModel:
 
         rf = wn_2_layers.get_receptive_field(mock_data_loaders.batch_size, sequence_length)
         assert rf == 2**(2-1) * 2
+
+    def test_early_stopping(self, wn_2_layers, mock_data_loaders):
+        wn_2_layers.save_model = Mock()  # make sure the model doesnt actually gets saved
+        wn_2_layers.apply_batches = Mock()
+        '''mock the data such that it will be
+        
+        epoch 0 | train : 1 test: 5
+        epoch 1 | train : 1 test: 4
+        epoch 2 | train : 1 test: 3
+        epoch 3 | train : 1 test: 2
+        epoch 4 | train : 1 test: 1
+        epoch 5 | train : 1 test: 2
+        epoch 6 | train : 1 test: 1
+        epoch 7 | train : 1 test: 2
+        epoch 8 | train : 1 test: 2
+        '''
+        wn_2_layers.apply_batches.side_effect = [1, 5,
+                                                 1, 4,
+                                                 1, 3,
+                                                 1, 2,
+                                                 1, 1,
+                                                 1, 2,  # patience counter = 1
+                                                 1, 1,
+                                                 1, 2,  # patience counter = 2
+                                                 1, 2,  # patience counter = 3 -> aborts training
+                                                 1, 2,
+                                                 1, 2]
+        epoch = wn_2_layers.train(mock_data_loaders, mock_data_loaders, epochs=100, patience=3)
+        assert epoch == 8
+
 
 
