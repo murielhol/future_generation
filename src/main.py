@@ -14,19 +14,31 @@ def main(config):
     if not model_path.exists():
         model_path.mkdir()
 
+    dataset, input_dim, num_layers = get_dataset_and_related_properties(config)
+    model = get_model(config, input_dim, num_layers)
+    run(config, model, dataset)
+
+
+def get_dataset_and_related_properties(config):
     if config.problem == ProblemTypes.MNIST_16_12:
         input_dim = 28
         num_layers = 4  # to have a receptive field of 16
         dataset = MnistDataset(config.batch_size)
     else:
         raise NotImplementedError
+    return dataset, input_dim, num_layers
 
+
+def get_model(config, input_dim, num_layers):
     if config.model_type == ModelTypes.WN:
         model = WN(input_dim=input_dim, layer_dim=config.layer_dim,
                    learning_rate=config.learning_rate, num_layers=num_layers)
     else:
         raise NotImplementedError
+    return model
 
+
+def run(config, model, dataset):
     if config.mode == 'train':
         model.train(dataset.train_loader, dataset.test_loader, config.epochs, config.patience)
     elif config.mode == 'evaluate':
