@@ -1,5 +1,5 @@
 from model import WN
-
+from model_utils import LossFunctions, LossCalculator
 from dataclasses import dataclass
 import pytest
 from torch.utils.data import DataLoader, Dataset
@@ -30,8 +30,8 @@ class TestWNModel:
     batch_size = 64
 
     @pytest.fixture(scope='class')
-    def mock_data_loaders(self):
-        mds = MockDataSet(input_dim=self.input_dim, sequence_length=self.sequence_length,
+    def mock_data_loader(self):
+        mds = MockDataSet(input_dim=self.input_dim, sequence_length=self.sequence_length+1,
                           number_of_examples=self.number_of_examples)
         return DataLoader(mds, batch_size=self.batch_size)
 
@@ -43,21 +43,21 @@ class TestWNModel:
     def wn_2_layers(self):
         return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.005)
 
-    def test_receptive_field(self, wn_4_layers, wn_2_layers, mock_data_loaders):
+    def test_receptive_field(self, wn_4_layers, wn_2_layers, mock_data_loader):
         '''
         the receptive field = 2^(num_layers -1) * kernel_size
         '''
         # can choose any sequence_length, as long as more then receptive field
         sequence_length = 100
-        rf = wn_4_layers.get_receptive_field(mock_data_loaders.batch_size, sequence_length)
+        rf = wn_4_layers.get_receptive_field(mock_data_loader.batch_size, sequence_length)
         assert rf == 2**(4-1) * 2
 
-        rf = wn_2_layers.get_receptive_field(mock_data_loaders.batch_size, sequence_length)
+        rf = wn_2_layers.get_receptive_field(mock_data_loader.batch_size, sequence_length)
         assert rf == 2**(2-1) * 2
 
-    def test_early_stopping(self, wn_2_layers, mock_data_loaders):
+    def test_early_stopping(self, wn_2_layers, mock_data_loader):
         wn_2_layers.save_model = Mock()  # make sure the model doesnt actually gets saved
-        wn_2_layers.apply_batches = Mock()
+        wn_2_layers.step_trough_batches = Mock()
         '''mock the data such that it will be
         
         epoch 0 | train : 1 test: 5
@@ -70,19 +70,27 @@ class TestWNModel:
         epoch 7 | train : 1 test: 2
         epoch 8 | train : 1 test: 2
         '''
-        wn_2_layers.apply_batches.side_effect = [1, 5,
-                                                 1, 4,
-                                                 1, 3,
-                                                 1, 2,
-                                                 1, 1,
-                                                 1, 2,  # patience counter = 1
-                                                 1, 1,
-                                                 1, 2,  # patience counter = 2
-                                                 1, 2,  # patience counter = 3 -> aborts training
-                                                 1, 2,
-                                                 1, 2]
-        epoch = wn_2_layers.train(mock_data_loaders, mock_data_loaders, epochs=100, patience=3)
+        wn_2_layers.step_trough_batches.side_effect = [1, 5,
+                                                       1, 4,
+                                                       1, 3,
+                                                       1, 2,
+                                                       1, 1,
+                                                       1, 2,  # patience counter = 1
+                                                       1, 1,
+                                                       1, 2,  # patience counter = 2
+                                                       1, 2,  # patience counter = 3 -> aborts training
+                                                       1, 2,
+                                                       1, 2]
+        epoch = wn_2_layers.train(mock_data_loader, mock_data_loader, epochs=100, patience=3)
         assert epoch == 8
 
+    def test_test_step(self, wn_2_layers, mock_data_loader):
+        initial_parameters = [p for p in wn_2_layers.generator.parameters()]
+        mask = wn_2_layers.create_mask(self.sequence_length, self.batch_size, receptive_field=2**(2-1) * 2)
+        sample = next(iter(mock_data_loader))
+        image, _ = sample
+        x, y = wn_2_layers.split_images_into_input_target(image)
+        wn_2_layers.test_step(x, y, mask, LossCalculator(LossFunctions.MSE))
+        assert initial_parameters == [p for p in wn_2_layers.generator.parameters()]
 
 

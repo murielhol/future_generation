@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 class ProblemTypes:
-    MNIST_16_12 = 'mnist_16_12' # use first 16 rows to free-run the last 12 rows of the mnist digit
+    MNIST_16_12 = 'mnist_16_12'  # use first 16 rows to free-run the last 12 rows of the mnist digit
 
 
 def main(config):
@@ -29,6 +29,11 @@ def main(config):
 
     if config.mode == 'train':
         model.train(dataset.train_loader, dataset.test_loader, config.epochs, config.patience)
+    elif config.mode == 'evaluate':
+        loss = model.evaluate(dataset.test_loader)
+        print(f"The test loss is {loss}")
+    else:
+        raise ValueError(f'Unknown mode: {config.mode} choose train or evaluate')
 
 
 if __name__ == "__main__":
@@ -47,12 +52,11 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch to train')
 
     parser.add_argument('--learning_rate', type=float, default=1e-5, help='Learning rate')
-    parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
+    parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
     parser.add_argument('--patience', type=int, default=3, help='Patience of early stopping')
 
-
     # Misc params
-    parser.add_argument('--mode', type=str, default='train', help='choose train or validate')
+    parser.add_argument('--mode', type=str, default='evaluate', help='choose train or validate')
 
     parsed = parser.parse_args()
 

@@ -38,7 +38,7 @@ class Model(ABC):
         pass
 
     @abstractmethod
-    def save_model(self):
+    def save_model(self, epoch):
         pass
 
     def get_receptive_field(self, batch_size, sequence_length) -> int:
@@ -82,15 +82,24 @@ class WN(Model):
         generator_optimizer = torch.optim.Adam(generator.parameters(), lr=self.learning_rate, eps=1e-5)
         return generator, generator_optimizer
 
-    def save_model(self):
-        torch.save(self.generator.state_dict(), f'.models/{self.model_name}.pth')
+    def save_model(self, epoch):
+        state = {
+                'epoch': epoch,
+                'generator': self.generator.state_dict(),
+                'gen_optimizer': self.generator_optimizer.state_dict(),
+                }
+        torch.save(state, f'models/{self.model_name}.pth.tar')
+
+    def load_model(self):
+        state = torch.load(f'models/{self.model_name}.pth.tar', map_location='cpu')
+        self.generator.load_state_dict(state['generator'])
 
     def train(self, train_data_loader: DataLoader, test_data_loader: DataLoader, epochs: int,
               patience: int):
 
         sequence_length = self.infer_sequence_length(test_data_loader)
         receptive_field = self.get_receptive_field(train_data_loader.batch_size, sequence_length)
-        print(f"the receptive field is {receptive_field}")
+        print(f"The receptive field is {receptive_field}")
 
         train_mask = self.create_mask(sequence_length, train_data_loader.batch_size, receptive_field)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
@@ -99,19 +108,19 @@ class WN(Model):
         best_loss_so_far = 9999999
         for epoch in range(epochs):
 
-            train_loss = self.apply_batches(train_data_loader, train_mask, loss_calculator, self.train_step)
-            test_loss = self.apply_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+            train_loss = self.step_trough_batches(train_data_loader, train_mask, loss_calculator, self.train_step)
+            test_loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
 
             print(f"epoch {epoch} | train : {train_loss} test: {test_loss}")
 
-            if self.early_stopping(best_loss_so_far, test_loss, patience):
+            if self.early_stopping(best_loss_so_far, test_loss, patience) or epoch == epochs-1:
                 print(f" Saving model at epoch {epoch} with loss {best_loss_so_far}")
-                self.save_model()
+                self.save_model(epoch)
                 return epoch
             elif test_loss < best_loss_so_far:
                 best_loss_so_far = test_loss
 
-    def apply_batches(self, data_loader, mask, loss_calculator, step_function):
+    def step_trough_batches(self, data_loader, mask, loss_calculator, step_function):
         running_loss = 0
         batch_index = 1
         for batch_index, batch in enumerate(data_loader):
@@ -120,6 +129,15 @@ class WN(Model):
             loss = step_function(inputs, targets, mask, loss_calculator)
             running_loss += loss
         return running_loss/batch_index
+
+    def evaluate(self, test_data_loader: DataLoader):
+        sequence_length = self.infer_sequence_length(test_data_loader)
+        receptive_field = self.get_receptive_field(test_data_loader.batch_size, sequence_length)
+        print(f"The receptive field is {receptive_field}")
+        test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
+        loss_calculator = LossCalculator(LossFunctions.MSE)
+        loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+        return loss
 
     def infer_sequence_length(self, test_data_loader):
         test_iterator = iter(test_data_loader)
@@ -166,6 +184,3 @@ class WN(Model):
         # the first row is not a target because it has no input
         targets = images[:, 0, 1:, :]
         return inputs, targets
-
-
-
