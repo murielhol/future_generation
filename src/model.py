@@ -6,8 +6,10 @@ from torch.autograd import Variable
 import numpy as np
 from torch.utils.data import DataLoader
 from abc import ABC, abstractmethod
-
+import json
+from pathlib import Path
 torch.manual_seed(0)
+
 
 
 @dataclass
@@ -19,11 +21,7 @@ class Model(ABC):
     generator: torch.nn.Module = field(init=False)
     generator_optimizer: torch.optim = field(init=False)
     early_stopping_counter = 0
-
-    @property
-    @abstractmethod
-    def model_name(self) -> str:
-        pass
+    model_name: str
 
     @abstractmethod
     def __post_init__(self):
@@ -40,6 +38,10 @@ class Model(ABC):
     @abstractmethod
     def save_model(self, epoch):
         pass
+
+    def save_loss_stats(self, loss_stats: dict):
+        with open(Path('models', f'{self.model_name}_loss_stats.json'), 'w') as fp:
+            json.dump(loss_stats, fp)
 
     def get_receptive_field(self, batch_size, sequence_length) -> int:
         # make sure that batch norm is turned off
@@ -71,10 +73,6 @@ class WN(Model):
     def __post_init__(self):
         self.generator, self.generator_optimizer = self.build_generator()
 
-    @property
-    def model_name(self) -> str:
-        return "WN"
-
     def build_generator(self):
         generator = Wavenet(input_dim=self.input_dim, embed_dim=self.layer_dim,
                             loss_function=LossFunctions.MSE, output_dim=self.input_dim, num_layers=self.num_layers,
@@ -88,10 +86,10 @@ class WN(Model):
                 'generator': self.generator.state_dict(),
                 'gen_optimizer': self.generator_optimizer.state_dict(),
                 }
-        torch.save(state, f'models/{self.model_name}.pth.tar')
+        torch.save(state, Path('models', f'{self.model_name}.pth.tar'))
 
     def load_model(self):
-        state = torch.load(f'models/{self.model_name}.pth.tar', map_location='cpu')
+        state = torch.load(Path(f'models, {self.model_name}.pth.tar'), map_location='cpu')
         self.generator.load_state_dict(state['generator'])
 
     def train(self, train_data_loader: DataLoader, test_data_loader: DataLoader, epochs: int,
@@ -106,16 +104,21 @@ class WN(Model):
 
         loss_calculator = LossCalculator(LossFunctions.MSE)
         best_loss_so_far = 9999999
+        loss_stats = {'train': [], 'test': []}
         for epoch in range(epochs):
 
             train_loss = self.step_trough_batches(train_data_loader, train_mask, loss_calculator, self.train_step)
             test_loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+
+            loss_stats['train'].append(train_loss)
+            loss_stats['test'].append(test_loss)
 
             print(f"epoch {epoch} | train : {train_loss} test: {test_loss}")
 
             if self.early_stopping(best_loss_so_far, test_loss, patience) or epoch == epochs-1:
                 print(f" Saving model at epoch {epoch} with loss {best_loss_so_far}")
                 self.save_model(epoch)
+                self.save_loss_stats(loss_stats)
                 return epoch
             elif test_loss < best_loss_so_far:
                 best_loss_so_far = test_loss

@@ -32,7 +32,8 @@ def get_dataset_and_related_properties(config):
 def get_model(config, input_dim, num_layers):
     if config.model_type == ModelTypes.WN:
         model = WN(input_dim=input_dim, layer_dim=config.layer_dim,
-                   learning_rate=config.learning_rate, num_layers=num_layers)
+                   learning_rate=config.learning_rate, num_layers=num_layers,
+                   model_name=ModelTypes.WN + '_' + config.problem)
     else:
         raise NotImplementedError
     return model
@@ -64,7 +65,7 @@ if __name__ == "__main__":
     parser.add_argument('--batch_size', type=int, default=64, help='Number of examples to process in a batch to train')
 
     parser.add_argument('--learning_rate', type=float, default=1e-5, help='Learning rate')
-    parser.add_argument('--epochs', type=int, default=3, help='Number of epochs')
+    parser.add_argument('--epochs', type=int, default=1, help='Number of epochs')
     parser.add_argument('--patience', type=int, default=3, help='Patience of early stopping')
 
     # Misc params

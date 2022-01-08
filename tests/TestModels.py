@@ -37,11 +37,13 @@ class TestWNModel:
 
     @pytest.fixture(scope='class')
     def wn_4_layers(self):
-        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=4, learning_rate=0.005)
+        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=4, learning_rate=0.005,
+                  model_name='test_model')
 
     @pytest.fixture(scope='class')
     def wn_2_layers(self):
-        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.005)
+        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.005,
+                  model_name='test_model')
 
     def test_receptive_field(self, wn_4_layers, wn_2_layers, mock_data_loader):
         '''
@@ -57,6 +59,7 @@ class TestWNModel:
 
     def test_early_stopping(self, wn_2_layers, mock_data_loader):
         wn_2_layers.save_model = Mock()  # make sure the model doesnt actually gets saved
+        wn_2_layers.save_loss_stats = Mock()
         wn_2_layers.step_trough_batches = Mock()
         '''mock the data such that it will be
         
