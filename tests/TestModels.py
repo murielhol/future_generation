@@ -45,16 +45,15 @@ class TestWNModel:
         return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.005,
                   model_name='test_model')
 
-    def test_receptive_field(self, wn_4_layers, wn_2_layers, mock_data_loader):
+    def test_receptive_field(self, wn_4_layers, wn_2_layers):
         '''
         the receptive field = 2^(num_layers -1) * kernel_size
         '''
         # can choose any sequence_length, as long as more then receptive field
-        sequence_length = 100
-        rf = wn_4_layers.get_receptive_field(mock_data_loader.batch_size, sequence_length)
+        rf = wn_4_layers.get_receptive_field()
         assert rf == 2**(4-1) * 2
 
-        rf = wn_2_layers.get_receptive_field(mock_data_loader.batch_size, sequence_length)
+        rf = wn_2_layers.get_receptive_field()
         assert rf == 2**(2-1) * 2
 
     def test_early_stopping(self, wn_2_layers, mock_data_loader):

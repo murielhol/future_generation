@@ -1,5 +1,7 @@
 import pytest
 from mnist_data import MnistDataset
+from unittest.mock import Mock
+import numpy as np
 
 
 class TestMnistDataset:
@@ -18,11 +20,20 @@ class TestMnistDataset:
             assert len(x) == 100
 
     def test_mnist_properties(self, mnist_dataset):
-        mnist_iter = enumerate(mnist_dataset.train_loader)
-        batch_idx, (example_data, example_targets) = next(mnist_iter)
+        mnist_iter = iter(mnist_dataset.train_loader)
+        example_data, example_targets = next(mnist_iter)
         assert example_data.shape == (100, 1, 28, 28)
-        assert example_data[0].min() >= 0
-        assert example_data[0].max() <= 1
+        assert example_data.min() == -1
+        assert example_data.max() == 1
+
+    @pytest.mark.parametrize('random_offset', [0, 10, 99, 700])
+    def test_sample_each_digit(self, mnist_dataset, random_offset):
+        np.random.randint = Mock()
+        np.random.randint.side_effect = [random_offset]
+        sample_x, sample_y = mnist_dataset.sample_each_digit()
+        assert sample_y.tolist() == [i for i in range(10)]
+        assert sample_x.min() == -1
+        assert sample_x.max() == 1
 
 
 

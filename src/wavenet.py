@@ -1,6 +1,6 @@
 import torch.nn as nn
 import torch.nn.functional as F
-from model_utils import Regressor, ModelRole
+from model_utils import ModelRole
 from torch import sigmoid, tanh
 
 
@@ -35,8 +35,8 @@ class Wavenet(nn.Module):
         self.final2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=1)
 
         self.loss_function = loss_function
-        self.regressor = Regressor(self.loss_function, embed_dim, self.output_dim)
         self.dropout = nn.Dropout(0.)
+        self.outputs = nn.Linear(embed_dim, output_dim)
 
     def forward(self, x):
 
@@ -72,7 +72,7 @@ class Wavenet(nn.Module):
         final = self.final2(F.relu(final))
         # make sure last dimension is number of channels
         final = final.permute(0, 2, 1)
-        outputs = self.regressor(final)
+        outputs = tanh(self.outputs(final))
 
         return outputs
 

@@ -3,11 +3,14 @@ from wavenet import Wavenet
 from dataclasses import dataclass, field
 from model_utils import LossFunctions, ModelRole, LossCalculator
 from torch.autograd import Variable
+import torchvision
 import numpy as np
 from torch.utils.data import DataLoader
 from abc import ABC, abstractmethod
 import json
 from pathlib import Path
+import matplotlib.pyplot as plt
+
 torch.manual_seed(0)
 
 
@@ -43,14 +46,14 @@ class Model(ABC):
         with open(Path('models', f'{self.model_name}_loss_stats.json'), 'w') as fp:
             json.dump(loss_stats, fp)
 
-    def get_receptive_field(self, batch_size, sequence_length) -> int:
+    def get_receptive_field(self) -> int:
+        sequence_length = 1000
         # make sure that batch norm is turned off
         self.generator.eval()
         self.generator_optimizer.zero_grad()
-        x = np.ones([batch_size, sequence_length, self.input_dim])
+        x = np.ones([1, sequence_length, self.input_dim])
         x = Variable(torch.from_numpy(x).float(), requires_grad=True)
-        pars = self.generator(x)
-        mu = pars[0]
+        mu = self.generator(x)
         grad = torch.zeros(mu.size())
         # imagine the last values in the sequence have a gradient
         grad[:, -1, :] = 1.0
@@ -58,6 +61,7 @@ class Model(ABC):
         # see what this gradient is wrt the input
         # check for any dimension, how many inputs have a non-zero gradient
         rf = (x.grad.data[0][:, 0] != 0).sum()
+        assert sequence_length > rf.item(), f'{sequence_length} is smaller then the receptive field, increase value'
         return rf
 
     def early_stopping(self, best_loss_so_far, new_loss, patience):
@@ -95,10 +99,10 @@ class WN(Model):
     def train(self, train_data_loader: DataLoader, test_data_loader: DataLoader, epochs: int,
               patience: int):
 
-        sequence_length = self.infer_sequence_length(test_data_loader)
-        receptive_field = self.get_receptive_field(train_data_loader.batch_size, sequence_length)
+        receptive_field = self.get_receptive_field()
         print(f"The receptive field is {receptive_field}")
 
+        sequence_length = self.infer_sequence_length(test_data_loader)
         train_mask = self.create_mask(sequence_length, train_data_loader.batch_size, receptive_field)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
 
@@ -134,13 +138,33 @@ class WN(Model):
         return running_loss/batch_index
 
     def evaluate(self, test_data_loader: DataLoader):
-        sequence_length = self.infer_sequence_length(test_data_loader)
-        receptive_field = self.get_receptive_field(test_data_loader.batch_size, sequence_length)
+        receptive_field = self.get_receptive_field()
         print(f"The receptive field is {receptive_field}")
+        sequence_length = self.infer_sequence_length(test_data_loader)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
         loss_calculator = LossCalculator(LossFunctions.MSE)
         loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
         return loss
+
+    def free_running(self, images, receptive_field):
+        sequence_length = images.shape[1]
+        for i in range(sequence_length - receptive_field):
+            sample_input = images[:, i:i+receptive_field, :]
+            sample_output = self.generator(sample_input)
+            # replace the original row with the generated row
+            images[:, i+receptive_field, :] = sample_output[:, -1, :]
+        return images
+
+    def visualize_performance(self, images: torch.Tensor):
+        receptive_field = self.get_receptive_field()
+        images_result = self.free_running(images.clone(), receptive_field)
+        # reverse black and white for the generated part for visualization
+        images[:, receptive_field:, :] = images[:, receptive_field:, :] * -1
+        images_result[:, receptive_field:, :] = images_result[:, receptive_field:, :] * -1
+        vis = torch.cat([images, images_result], dim=0)[:, None, :, :]
+        grid = torchvision.utils.make_grid(vis, nrow=10, pad_value=1)
+        plt.imshow(grid.permute(1, 2, 0))
+        plt.savefig(Path('models', f'{self.model_name}.png'))
 
     def infer_sequence_length(self, test_data_loader):
         test_iterator = iter(test_data_loader)
@@ -164,8 +188,8 @@ class WN(Model):
         self.generator_optimizer.zero_grad()
         outputs = self.generator(inputs)
         loss = loss_calculator.calculate_loss(targets, outputs)
-        loss = loss.mean(-1)
-        loss = (loss * train_mask).mean(0)
+        loss = loss.sum(-1)
+        loss = (loss * train_mask).sum(0)
         loss = loss.mean()
         loss.backward()
         self.generator_optimizer.step()

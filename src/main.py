@@ -3,7 +3,8 @@ from model_utils import ModelTypes
 from mnist_data import MnistDataset
 from model import WN
 from pathlib import Path
-
+import torchvision
+import matplotlib.pyplot as plt
 
 class ProblemTypes:
     MNIST_16_12 = 'mnist_16_12'  # use first 16 rows to free-run the last 12 rows of the mnist digit
@@ -43,8 +44,16 @@ def run(config, model, dataset):
     if config.mode == 'train':
         model.train(dataset.train_loader, dataset.test_loader, config.epochs, config.patience)
     elif config.mode == 'evaluate':
-        loss = model.evaluate(dataset.test_loader)
-        print(f"The test loss is {loss}")
+        # loss = model.evaluate(dataset.test_loader)
+        # print(f"The test loss is {loss}")
+        if isinstance(dataset, MnistDataset):
+            sample_x, _ = dataset.sample_each_digit()
+        else:
+            print(f'No code to sample dataset of type {type(dataset)}')
+            return
+
+        model.visualize_performance(sample_x)
+
     else:
         raise ValueError(f'Unknown mode: {config.mode} choose train or evaluate')
 
