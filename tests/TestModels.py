@@ -95,4 +95,15 @@ class TestWNModel:
         wn_2_layers.test_step(x, y, mask, LossCalculator(LossFunctions.MSE))
         assert initial_parameters == [p for p in wn_2_layers.generator.parameters()]
 
+    def test_freerunning(self, wn_2_layers):
+        receptive_field=2**(2-1) * 2
+        wn_2_layers.generator = Mock()
+        batch_size = 10
+        x = torch.ones((batch_size, self.sequence_length, self.input_dim))
+        wn_2_layers.generator.side_effect = [torch.zeros_like(x) for _ in range(self.sequence_length - receptive_field)]
+
+        result = wn_2_layers.free_running(x, receptive_field)
+        assert result.sum() == receptive_field * self.input_dim * batch_size
+
+
 
