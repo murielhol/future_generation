@@ -35,7 +35,6 @@ class Wavenet(nn.Module):
         self.final2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=1)
 
         self.loss_function = loss_function
-        self.dropout = nn.Dropout(0.)
         self.outputs = nn.Linear(embed_dim, output_dim)
 
     def forward(self, x):

@@ -12,7 +12,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 torch.manual_seed(0)
-
+np.random.seed(0)
 
 
 @dataclass
@@ -75,14 +75,14 @@ class Model(ABC):
 class WN(Model):
 
     def __post_init__(self):
-        self.generator, self.generator_optimizer = self.build_generator()
+        self.generator, self.generator_optimizer, self.generator_loss_function = self.build_generator()
 
     def build_generator(self):
         generator = Wavenet(input_dim=self.input_dim, embed_dim=self.layer_dim,
                             loss_function=LossFunctions.MSE, output_dim=self.input_dim, num_layers=self.num_layers,
                             model_type=ModelRole.GENERATOR)
         generator_optimizer = torch.optim.Adam(generator.parameters(), lr=self.learning_rate, eps=1e-5)
-        return generator, generator_optimizer
+        return generator, generator_optimizer, torch.nn.MSELoss()
 
     def save_model(self, epoch):
         state = {
@@ -90,11 +90,12 @@ class WN(Model):
                 'generator': self.generator.state_dict(),
                 'gen_optimizer': self.generator_optimizer.state_dict(),
                 }
-        torch.save(state, Path('models', f'{self.model_name}.pth.tar'))
+        torch.save(state, Path('models', f'{self.model_name}.pth'))
 
     def load_model(self):
-        state = torch.load(Path(f'models, {self.model_name}.pth.tar'), map_location='cpu')
+        state = torch.load(Path('models', f'{self.model_name}.pth'), map_location='cpu')
         self.generator.load_state_dict(state['generator'])
+        self.generator_optimizer.load_state_dict(state['gen_optimizer'])
 
     def train(self, train_data_loader: DataLoader, test_data_loader: DataLoader, epochs: int,
               patience: int):
@@ -106,7 +107,7 @@ class WN(Model):
         train_mask = self.create_mask(sequence_length, train_data_loader.batch_size, receptive_field)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
 
-        loss_calculator = LossCalculator(LossFunctions.MSE)
+        loss_calculator = self.generator_loss_function
         best_loss_so_far = 9999999
         loss_stats = {'train': [], 'test': []}
         for epoch in range(epochs):
@@ -138,11 +139,12 @@ class WN(Model):
         return running_loss/batch_index
 
     def evaluate(self, test_data_loader: DataLoader):
+        self.load_model()
         receptive_field = self.get_receptive_field()
         print(f"The receptive field is {receptive_field}")
         sequence_length = self.infer_sequence_length(test_data_loader)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
-        loss_calculator = LossCalculator(LossFunctions.MSE)
+        loss_calculator = self.generator_loss_function
         loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
         return loss
 
@@ -185,9 +187,10 @@ class WN(Model):
         return mask
 
     def train_step(self, inputs, targets, train_mask, loss_calculator) -> float:
+        self.generator.train()
         self.generator_optimizer.zero_grad()
         outputs = self.generator(inputs)
-        loss = loss_calculator.calculate_loss(targets, outputs)
+        loss = loss_calculator(outputs, targets)
         loss = loss.sum(-1)
         loss = (loss * train_mask).sum(0)
         loss = loss.mean()
@@ -198,7 +201,7 @@ class WN(Model):
     def test_step(self, inputs, targets, test_mask, loss_calculator) -> float:
         self.generator.eval()
         outputs = self.generator(inputs)
-        loss = loss_calculator.calculate_loss(targets, outputs)
+        loss = loss_calculator(outputs, targets)
         loss = loss.sum(-1)
         loss = (loss * test_mask).sum(0)
         loss = loss.mean()

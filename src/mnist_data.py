@@ -37,9 +37,9 @@ class MnistDataset(DataSet):
                                     transform=Compose([ToTensor(), MinMaxScaler()]), download=True)
         test_data = datasets.MNIST(root='data', train=False,
                                    transform=Compose([ToTensor(), MinMaxScaler()]), download=True)
-        train_loader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=1,
+        train_loader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=0,
                                   drop_last=True)
-        test_loader = DataLoader(test_data, batch_size=self.batch_size, shuffle=True, num_workers=1,
+        test_loader = DataLoader(test_data, batch_size=self.batch_size, shuffle=True, num_workers=0,
                                  drop_last=True)
         return train_loader, test_loader
 

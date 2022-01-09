@@ -37,12 +37,12 @@ class TestWNModel:
 
     @pytest.fixture(scope='class')
     def wn_4_layers(self):
-        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=4, learning_rate=0.005,
+        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=4, learning_rate=0.05,
                   model_name='test_model')
 
     @pytest.fixture(scope='class')
     def wn_2_layers(self):
-        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.005,
+        return WN(input_dim=self.input_dim, layer_dim=128, num_layers=2, learning_rate=0.05,
                   model_name='test_model')
 
     def test_receptive_field(self, wn_4_layers, wn_2_layers):
@@ -87,13 +87,24 @@ class TestWNModel:
         assert epoch == 8
 
     def test_test_step(self, wn_2_layers, mock_data_loader):
-        initial_parameters = [p for p in wn_2_layers.generator.parameters()]
+        initial_parameters = [p for p in wn_2_layers.generator.parameters()][0].clone().detach().numpy()
         mask = wn_2_layers.create_mask(self.sequence_length, self.batch_size, receptive_field=2**(2-1) * 2)
         sample = next(iter(mock_data_loader))
         image, _ = sample
         x, y = wn_2_layers.split_images_into_input_target(image)
         wn_2_layers.test_step(x, y, mask, LossCalculator(LossFunctions.MSE))
-        assert initial_parameters == [p for p in wn_2_layers.generator.parameters()]
+        parameters_after_test_step = [p for p in wn_2_layers.generator.parameters()][0].clone().detach().numpy()
+        assert (initial_parameters == parameters_after_test_step).all()
+
+    def test_train_step(self, wn_2_layers, mock_data_loader):
+        initial_parameters = [p for p in wn_2_layers.generator.parameters()][0].clone().detach().numpy()
+        mask = wn_2_layers.create_mask(self.sequence_length, self.batch_size, receptive_field=2**(2-1) * 2)
+        sample = next(iter(mock_data_loader))
+        image, _ = sample
+        x, y = wn_2_layers.split_images_into_input_target(image)
+        wn_2_layers.train_step(x, y, mask, LossCalculator(LossFunctions.MSE))
+        parameters_after_train_step = [p for p in wn_2_layers.generator.parameters()][0].clone().detach().numpy()
+        assert not (initial_parameters == parameters_after_train_step).all()
 
     def test_freerunning(self, wn_2_layers):
         receptive_field=2**(2-1) * 2
@@ -101,9 +112,5 @@ class TestWNModel:
         batch_size = 10
         x = torch.ones((batch_size, self.sequence_length, self.input_dim))
         wn_2_layers.generator.side_effect = [torch.zeros_like(x) for _ in range(self.sequence_length - receptive_field)]
-
         result = wn_2_layers.free_running(x, receptive_field)
         assert result.sum() == receptive_field * self.input_dim * batch_size
-
-
-
