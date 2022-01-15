@@ -1,43 +1,40 @@
+from typing import List
+
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from model_utils import ModelRole
 from torch import sigmoid, tanh
 
 
 class Wavenet(nn.Module):
-    def __init__(self, input_dim, embed_dim, loss_function, output_dim, num_layers: int,
-                 model_type: ModelRole = ModelRole.GENERATOR):
+    def __init__(self, input_dim, layer_dim, output_dim, num_layers: int):
         super(Wavenet, self).__init__()
         self.input_dim = input_dim
-        self.embed_dim = embed_dim
+        self.layer_dim = layer_dim
         self.output_dim = output_dim
         self.num_layer = num_layers
-        self.embedding = nn.Conv1d(input_dim, embed_dim, kernel_size=1)
+        self.embedding = nn.Conv1d(input_dim, layer_dim, kernel_size=1)
         self.filter_convs = nn.ModuleList()
         self.gate_convs = nn.ModuleList()
         self.residuals = nn.ModuleList()
-        self.residuals_bns = nn.ModuleList()
         self.skip = nn.ModuleList()
-        self.skip.append(nn.Conv1d(embed_dim, embed_dim, kernel_size=1))
-        self.model_type = model_type
+        self.skip.append(nn.Conv1d(layer_dim, layer_dim, kernel_size=1))
 
         dilate = 1
         self.kernel_size = 2
         for i in range(self.num_layer):
-            self.filter_convs.append(nn.Conv1d(embed_dim, embed_dim, kernel_size=self.kernel_size, dilation=dilate))
-            self.gate_convs.append(nn.Conv1d(embed_dim, embed_dim, kernel_size=self.kernel_size, dilation=dilate))
-            self.residuals.append(nn.Conv1d(embed_dim, embed_dim, kernel_size=1))
-            self.skip.append(nn.Conv1d(embed_dim, embed_dim, kernel_size=1))
+            self.filter_convs.append(nn.Conv1d(layer_dim, layer_dim, kernel_size=self.kernel_size, dilation=dilate))
+            self.gate_convs.append(nn.Conv1d(layer_dim, layer_dim, kernel_size=self.kernel_size, dilation=dilate))
+            self.residuals.append(nn.Conv1d(layer_dim, layer_dim, kernel_size=1))
+            self.skip.append(nn.Conv1d(layer_dim, layer_dim, kernel_size=1))
 
             dilate *= 2
 
-        self.final1 = nn.Conv1d(embed_dim, embed_dim, kernel_size=1)
-        self.final2 = nn.Conv1d(embed_dim, embed_dim, kernel_size=1)
+        self.final1 = nn.Conv1d(layer_dim, layer_dim, kernel_size=1)
+        self.final2 = nn.Conv1d(layer_dim, layer_dim, kernel_size=1)
+        self.outputs = nn.Linear(layer_dim, output_dim)
 
-        self.loss_function = loss_function
-        self.outputs = nn.Linear(embed_dim, output_dim)
-
-    def forward(self, x):
+    def forward(self, x, y=None, mask=None) -> List[torch.Tensor]:
 
         # x is [N, seq_length, channels]
         # but conv1d wants [N, channels, seq_length]
@@ -73,7 +70,7 @@ class Wavenet(nn.Module):
         final = final.permute(0, 2, 1)
         outputs = tanh(self.outputs(final))
 
-        return outputs
+        return [outputs]
 
 
 
