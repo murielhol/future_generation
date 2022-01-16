@@ -1,6 +1,5 @@
 import math
-from typing import List, Dict
-
+from typing import Dict
 import torch
 from wavenet import Wavenet
 from swavenet import StochasticWavenet
@@ -165,8 +164,8 @@ class WN(Model):
         epoch = 0
         for epoch in range(epochs):
 
-            train_loss = self.step_trough_batches(train_data_loader, train_mask, loss_calculator, self.train_step)
-            test_loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+            train_loss = self.step_trough_batches(train_data_loader, train_mask, self.train_step)
+            test_loss = self.step_trough_batches(test_data_loader, test_mask, self.test_step)
 
             loss_stats['train_mse'].append(train_loss['mse'])
             loss_stats['test_mse'].append(test_loss['mse'])
@@ -188,8 +187,7 @@ class WN(Model):
         print(f"The receptive field is {receptive_field}")
         sequence_length = self.infer_sequence_length(test_data_loader)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
-        loss_calculator = self.generator_loss_function
-        loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+        loss = self.step_trough_batches(test_data_loader, test_mask, self.test_step)
         return loss
 
     def step_trough_batches(self, data_loader, mask, step_function) -> Dict[str, float]:
@@ -223,8 +221,6 @@ class WN(Model):
         loss = (loss * test_mask).sum(0)
         loss = loss.mean()
         return {'mse': loss.item()}
-
-
 
 
 class SWN(Model):

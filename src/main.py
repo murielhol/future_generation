@@ -72,7 +72,7 @@ if __name__ == "__main__":
                         help="choose 1 from ProblemTypes")
 
     # Model params
-    parser.add_argument('--model_type', type=str, default=ModelTypes.SWN, help='choose from ModelTypes')
+    parser.add_argument('--model_type', type=str, default=ModelTypes.WN, help='choose from ModelTypes')
     parser.add_argument('--layer_dim', type=int, default=128, help='Number of weights in each layer')
 
     # Training params
@@ -80,7 +80,7 @@ if __name__ == "__main__":
 
     parser.add_argument('--learning_rate', type=float, default=1e-5, help='Learning rate')
     parser.add_argument('--epochs', type=int, default=100, help='Number of epochs')
-    parser.add_argument('--patience', type=int, default=30, help='Patience of early stopping')
+    parser.add_argument('--patience', type=int, default=3, help='Patience of early stopping')
 
     # Misc params
     parser.add_argument('--mode', type=str, default='train', help='choose train or validate')
