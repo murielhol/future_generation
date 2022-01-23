@@ -11,7 +11,7 @@ terraform {
   backend "s3" {
     bucket = "future-generation-backend"
     key = "prod/terraform.tfstate"
-    region = var.region
+    region = "eu-west-1"
   }
 }
 

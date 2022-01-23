@@ -340,5 +340,3 @@ class SWN(Model):
     @staticmethod
     def get_new_kld_weight(epoch, total_epoch, init_kd, end_kd=1):
         return end_kd + (init_kd - end_kd) * math.cos(0.5 * math.pi * float(epoch) / total_epoch)
-
-

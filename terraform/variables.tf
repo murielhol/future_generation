@@ -7,7 +7,7 @@ variable "region" {
 variable "name" {
     description = "Name to use for resources"
     type = string
-    default = "future_generation"
+    default = "future-generation"
 }
 
 variable "tags" {
