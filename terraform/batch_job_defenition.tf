@@ -37,10 +37,14 @@ data "aws_iam_policy_document" "s3_policy" {
     actions = [
           "s3:GetObject*",
           "s3:PutObject*",
+          "s3:ListBucket*",
+
     ]
 
     resources = [
-      aws_s3_bucket.batch_job_bucket.arn
+      aws_s3_bucket.batch_job_bucket.arn,
+      "${aws_s3_bucket.batch_job_bucket.arn}/*"
+
     ]
   }
 }
@@ -56,7 +60,6 @@ resource "aws_iam_role_policy_attachment" "s3_role_policy" {
 
 
 # now describe the actual job
-
 resource "aws_batch_job_definition" "future_generation_training_job" {
   name = var.name
   platform_capabilities = ["FARGATE"]
@@ -69,8 +72,8 @@ resource "aws_batch_job_definition" "future_generation_training_job" {
     "platformVersion": "LATEST"
   },
   "resourceRequirements": [
-    {"type": "VCPU", "value": "0.25"},
-    {"type": "MEMORY", "value": "512"}
+    {"type": "VCPU", "value": "0.5"},
+    {"type": "MEMORY", "value": "2048"}
   ],
   "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}"
 }

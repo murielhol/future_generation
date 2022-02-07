@@ -2,6 +2,7 @@
 .terraform/
 .terraform.lock.hcl
 output.txt
+*.tfvars
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -136,4 +137,4 @@ dmypy.json
 
 data/
 .idea
-models/
+outputs/
