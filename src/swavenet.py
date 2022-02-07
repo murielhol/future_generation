@@ -195,6 +195,14 @@ class StochasticWavenet(nn.Module):
                 z_posterior = torch.clamp(z_posterior, max=8.)
                 mu_posterior, theta_posterior = torch.chunk(z_posterior, 2, 1)
 
+                '''
+                trick from Fraccaro et al : https://arxiv.org/abs/1605.07571
+                So that the model doesnt ignore the latent variables and just updates the
+                backwards vectors to imitate the prior, 
+                '''
+
+                mu_posterior = mu_posterior + mu_prior
+
                 # during the training step, you update the posterior
                 if self.training:
                     z = self.reparameterize(mu_posterior, theta_posterior)

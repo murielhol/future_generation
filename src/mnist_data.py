@@ -1,11 +1,12 @@
 import torch
 from torchvision import datasets
-from torchvision.transforms import ToTensor, Compose, Normalize
+from torchvision.transforms import ToTensor, Compose
 from torch.utils.data import DataLoader
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from collections import Counter
 import numpy as np
+
 
 @dataclass
 class DataSet(ABC):
@@ -32,11 +33,14 @@ class MinMaxScaler(object):
 @dataclass
 class MnistDataset(DataSet):
 
+    data_path: str
+    download: bool
+
     def prepare_data_loaders(self) -> (DataLoader, DataLoader):
-        train_data = datasets.MNIST(root='data', train=True,
-                                    transform=Compose([ToTensor(), MinMaxScaler()]), download=True)
-        test_data = datasets.MNIST(root='data', train=False,
-                                   transform=Compose([ToTensor(), MinMaxScaler()]), download=True)
+        train_data = datasets.MNIST(root=self.data_path, train=True,
+                                    transform=Compose([ToTensor(), MinMaxScaler()]), download=self.download)
+        test_data = datasets.MNIST(root=self.data_path, train=False,
+                                   transform=Compose([ToTensor(), MinMaxScaler()]), download=self.download)
         train_loader = DataLoader(train_data, batch_size=self.batch_size, shuffle=True, num_workers=0,
                                   drop_last=True)
         test_loader = DataLoader(test_data, batch_size=self.batch_size, shuffle=True, num_workers=0,
@@ -44,7 +48,7 @@ class MnistDataset(DataSet):
         return train_loader, test_loader
 
     def sample_each_digit(self):
-        test_data = datasets.MNIST(root='data', train=False, transform=ToTensor(), download=True)
+        test_data = datasets.MNIST(root=self.data_path, train=False, transform=ToTensor(), download=self.download)
         number_of_datapoints = test_data.targets.shape[0]
         random_offset = np.random.randint(low=0, high=int(number_of_datapoints/10-1))
         # check how many examples per digit, so you know where in the sorted data to look
