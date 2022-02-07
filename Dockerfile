@@ -12,6 +12,5 @@ RUN pipenv --python 3.7
 RUN pipenv install
 
 ADD src/ /script/src
-ADD models /script/models
 
-ENTRYPOINT ["pipenv", "run", "python", "src/main.py"]
+CMD ["pipenv", "run", "python", "src/main.py"]

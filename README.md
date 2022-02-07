@@ -4,21 +4,13 @@
 ## build the container
 `docker build -t future_generation .`
 
-## to debug the container
-`docker run -it future_generation /bin/bash`
-
-To stop press ctrl-d
-
-
-aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin <container registry id>.dkr.ecr.us-east-1.amazonaws.com
-docker tag docker_image_name:latest <container registry id>.dkr.ecr.us-east-1.amazonaws.com/docker_image_name:latest
-docker push <container registry id>.dkr.ecr.us-east-1.amazonaws.com/docker_image_name:latest
-
+## to run the container on your local machine
+`aws-vault exec private -- docker run -it -e AWS_REGION -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_SECURITY_TOKEN future_generation`
 
 # terraform
 I use aws-vault to handle credentials. 
 
-Note that you need to setup your MFA device in order to be able to create the IAM roles.
+Note that you need to setup your MFA device in order to be able to create the IAM roles for the batch job.
 
 
 # resources

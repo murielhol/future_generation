@@ -75,7 +75,11 @@ resource "aws_batch_job_definition" "future_generation_training_job" {
     {"type": "VCPU", "value": "0.5"},
     {"type": "MEMORY", "value": "2048"}
   ],
-  "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}"
+  "executionRoleArn": "${aws_iam_role.ecs_task_execution_role.arn}",
+  "networkConfiguration": {
+                    "assignPublicIp": "ENABLED"
+                }
+
 }
 CONTAINER_PROPERTIES
 }
