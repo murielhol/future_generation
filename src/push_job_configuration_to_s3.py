@@ -10,7 +10,8 @@ class JobPreparation:
         self.s3_handler = S3Handler()
 
     def configuration_to_s3(self):
-        self.s3_handler.upload_file_to_s3('configuration.json', f'inputs/configuration.json')
+        response = self.s3_handler.upload_file_to_s3('configuration.json', f'inputs/configuration.json')
+        print(response)
 
 
 if __name__ == "__main__":

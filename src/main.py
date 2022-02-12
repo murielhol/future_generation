@@ -124,7 +124,7 @@ class JobRunner:
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--mode', type=str, default='evaluate', choices=['train', 'evaluate'])
+    parser.add_argument('--mode', type=str, default='train', choices=['train', 'evaluate'])
     parser.add_argument('--model_name', type=str, default='mnist_16_12_wn')
     parsed = parser.parse_args()
     jr = JobRunner(parsed.mode)
