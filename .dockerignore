@@ -1,9 +1,7 @@
-*.json
-*.png
-*.pth
-*.gz
 */data/
 */outputs/
 */prepare_new_training_job.py
 */image_to_ecr.py
 */start_batch_job.py
+terraform/
+tests/

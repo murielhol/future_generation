@@ -13,4 +13,4 @@ RUN pipenv install
 
 ADD src/ /script/src
 
-CMD ["pipenv", "run", "python", "src/main.py"]
+CMD ["pipenv", "run", "--", "python", "src/main.py", "--mode", "train"]

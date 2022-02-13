@@ -1,5 +1,3 @@
-
-
 resource "aws_batch_job_queue" "future_generation_training_queue" {
   name     = var.name
   state    = "ENABLED"
