@@ -1,6 +1,5 @@
 import math
-from typing import List, Dict
-
+from typing import Dict
 import torch
 from wavenet import Wavenet
 from swavenet import StochasticWavenet
@@ -46,7 +45,7 @@ class Model(ABC):
         pass
 
     def save_loss_stats(self, loss_stats: dict):
-        with open(Path('models', f'{self.model_name}_loss_stats.json'), 'w') as fp:
+        with open(Path('outputs', f'{self.model_name}', 'loss_stats.json'), 'w') as fp:
             json.dump(loss_stats, fp)
 
     def get_receptive_field(self) -> int:
@@ -92,7 +91,7 @@ class Model(ABC):
         vis = torch.cat([images, images_result], dim=0)[:, None, :, :]
         grid = torchvision.utils.make_grid(vis, nrow=10, pad_value=1)
         plt.imshow(grid.permute(1, 2, 0))
-        plt.savefig(Path('models', f'{self.model_name}.png'))
+        plt.savefig(Path('outputs', f'{self.model_name}', 'freerunning.png'))
 
     def infer_sequence_length(self, test_data_loader):
         test_iterator = iter(test_data_loader)
@@ -141,10 +140,10 @@ class WN(Model):
                 'generator': self.generator.state_dict(),
                 'gen_optimizer': self.generator_optimizer.state_dict(),
                 }
-        torch.save(state, Path('models', f'{self.model_name}.pth'))
+        torch.save(state, Path('outputs', self.model_name, f'state.pth'))
 
     def load_model(self):
-        state = torch.load(Path('models', f'{self.model_name}.pth'), map_location='cpu')
+        state = torch.load(Path('outputs', self.model_name, f'state.pth'), map_location='cpu')
         self.generator.load_state_dict(state['generator'])
         self.generator_optimizer.load_state_dict(state['gen_optimizer'])
 
@@ -158,15 +157,15 @@ class WN(Model):
         train_mask = self.create_mask(sequence_length, train_data_loader.batch_size, receptive_field)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
 
-        loss_calculator = self.generator_loss_function
         best_loss_so_far = 9999999
         loss_stats = {'train_mse': [], 'test_mse': []}
 
         epoch = 0
+        self.save_model(epoch)
         for epoch in range(epochs):
 
-            train_loss = self.step_trough_batches(train_data_loader, train_mask, loss_calculator, self.train_step)
-            test_loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+            train_loss = self.step_trough_batches(train_data_loader, train_mask, self.train_step)
+            test_loss = self.step_trough_batches(test_data_loader, test_mask, self.test_step)
 
             loss_stats['train_mse'].append(train_loss['mse'])
             loss_stats['test_mse'].append(test_loss['mse'])
@@ -188,8 +187,7 @@ class WN(Model):
         print(f"The receptive field is {receptive_field}")
         sequence_length = self.infer_sequence_length(test_data_loader)
         test_mask = self.create_mask(sequence_length, test_data_loader.batch_size, receptive_field)
-        loss_calculator = self.generator_loss_function
-        loss = self.step_trough_batches(test_data_loader, test_mask, loss_calculator, self.test_step)
+        loss = self.step_trough_batches(test_data_loader, test_mask, self.test_step)
         return loss
 
     def step_trough_batches(self, data_loader, mask, step_function) -> Dict[str, float]:
@@ -223,8 +221,6 @@ class WN(Model):
         loss = (loss * test_mask).sum(0)
         loss = loss.mean()
         return {'mse': loss.item()}
-
-
 
 
 class SWN(Model):
@@ -344,5 +340,3 @@ class SWN(Model):
     @staticmethod
     def get_new_kld_weight(epoch, total_epoch, init_kd, end_kd=1):
         return end_kd + (init_kd - end_kd) * math.cos(0.5 * math.pi * float(epoch) / total_epoch)
-
-

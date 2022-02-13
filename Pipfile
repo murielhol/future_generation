@@ -12,6 +12,8 @@ torchvision = "*"
 numpy = "==1.21.5"
 pytest = "*"
 importlib-metadata = "*"
+docker = "*"
+boto3 = "*"
 
 [requires]
 python_version = "3.7"
