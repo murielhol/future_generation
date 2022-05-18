@@ -1,6 +1,6 @@
 import numpy as np
 
-from model import WN
+from models import WN
 from dataclasses import dataclass
 import pytest
 from torch.utils.data import DataLoader, Dataset
@@ -121,6 +121,11 @@ class TestWNModel:
         wn_2_layers.generator.side_effect = [[torch.zeros_like(x)] for _ in range(self.sequence_length - receptive_field)]
         result = wn_2_layers.free_running(x, receptive_field)
         assert result.sum() == receptive_field * self.input_dim * batch_size
+
+    def test_create_mask(self, wn_2_layers):
+        mask = wn_2_layers.create_mask(sequence_length=88, batch_size=99, receptive_field=14)
+        assert mask.size() == (99, 88)
+        assert mask.sum() == (88-14) * 99
 
 
 class TestSWNModel:

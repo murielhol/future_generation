@@ -7,7 +7,7 @@ import boto3
 
 docker_client = docker.from_env()
 ecr_client = boto3.client('ecr')
-repository_name = 'future_generation'
+repository_name = 'future-generation'
 
 
 ecr_credentials = ecr_client.get_authorization_token()['authorizationData'][0]
@@ -37,4 +37,5 @@ image.tag(ecr_repo_name, tag='1')
 # push image the ECR
 push_log = docker_client.images.push(ecr_repo_name, tag='1')
 print(push_log)
+
 

@@ -8,7 +8,7 @@ class TestMnistDataset:
 
     @pytest.fixture(scope='class')
     def mnist_dataset(self):
-        return MnistDataset(batch_size=100)
+        return MnistDataset(batch_size=100, data_path='testdata', download=True)
 
     def test_data_loaders(self, mnist_dataset):
         assert mnist_dataset.train_loader.batch_size == 100

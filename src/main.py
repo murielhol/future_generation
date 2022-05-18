@@ -13,7 +13,6 @@ class Configuration:
     problem: str
     model_type: str
     layer_dim: int
-    learning_rate: int
     learning_rate: float
     epochs: int
     patience: int
@@ -22,7 +21,7 @@ class Configuration:
     def to_json(self) -> str:
         return json.dumps(asdict(self))
 
-    def to_dict(self) -> str:
+    def to_dict(self) -> dict:
         return asdict(self)
 
 
@@ -125,7 +124,7 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--mode', type=str, default='train', choices=['train', 'evaluate'])
-    parser.add_argument('--model_name', type=str, default='mnist_16_12_wn')
+    parser.add_argument('--model_name', type=str, default='mnist_16_12_swn')
     parsed = parser.parse_args()
     jr = JobRunner(parsed.mode)
     jr.run(model_name=parsed.model_name)

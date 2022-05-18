@@ -5,8 +5,8 @@ TBC
 
 ## overview
 
-- src/build_image_push_to_ecr.py builds the image and pushed it to ecr. Because this takes relatively long, instead of making a new images everytime I want to test different parameters or a different dataset, I make use of a seperate configuration file. 
-- src/push_job_configuration_to_s3.py pushed a new job configuration to S3. This is much quicker the making a new image, and allows for quickly changing the parameters or dataset.
+- src/build_image_push_to_ecr.py builds the image and pushes it to ecr. Because this takes relatively long, instead of making a new image everytime I want to test different parameters or a different dataset, I make use of a seperate configuration file. 
+- src/push_job_configuration_to_s3.py pushes a new job configuration to S3. This is much quicker than making a new image, and allows for quickly changing the parameters or dataset.
 - src/submit_batch_job_to_queue.py submits a new job to the queue
 
 See [AWS Batch-Based Architecture for more info](https://docs.aws.amazon.com/wellarchitected/latest/high-performance-computing-lens/batch-based-architecture.html)

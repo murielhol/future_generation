@@ -34,8 +34,7 @@ class Wavenet(nn.Module):
         self.final2 = nn.Conv1d(layer_dim, layer_dim, kernel_size=1)
         self.outputs = nn.Linear(layer_dim, output_dim)
 
-    def forward(self, x, y=None, mask=None) -> List[torch.Tensor]:
-
+    def forward(self, x, apply_tanh=True) -> List[torch.Tensor]:
         # x is [N, seq_length, channels]
         # but conv1d wants [N, channels, seq_length]
         x = x.permute(0, 2, 1)
@@ -68,8 +67,9 @@ class Wavenet(nn.Module):
         final = self.final2(F.relu(final))
         # make sure last dimension is number of channels
         final = final.permute(0, 2, 1)
-        outputs = tanh(self.outputs(final))
-
+        outputs = self.outputs(final)
+        if apply_tanh:
+            outputs = tanh(outputs)
         return [outputs]
 
 

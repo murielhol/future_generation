@@ -142,7 +142,7 @@ class StochasticWavenet(nn.Module):
 
         return backwards
 
-    def forward(self, x, y=None, mask=None) -> List[torch.Tensor]:
+    def forward(self, x, y=None, mask=None, apply_tanh=True) -> List[torch.Tensor]:
         # x, y are [N, seq_length, channels]
         # but conv1d wants [N, channels, seq_length]
         x = x.permute(0, 2, 1)     
@@ -158,7 +158,7 @@ class StochasticWavenet(nn.Module):
 
         x = F.relu(self.embedding(x))
 
-        # forwards non stochastic layers
+        # forwards non-stochastic layers
         dilate = 1
         final = self.initial_skip(x)
         for i in range(self.num_layers - self.num_stochastic_layers):
@@ -186,7 +186,7 @@ class StochasticWavenet(nn.Module):
 
             # sample z from the prior
             # is replaced with z from posterior later on if training
-            z = self.reparameterize(mu_prior, theta_prior)
+            z = mu_prior# self.reparameterize(mu_prior, theta_prior)
 
             if backward_vecs:
                 z_posterior = backward_vecs[self.num_stochastic_layers - 1 - i]
@@ -198,7 +198,7 @@ class StochasticWavenet(nn.Module):
                 '''
                 trick from Fraccaro et al : https://arxiv.org/abs/1605.07571
                 So that the model doesnt ignore the latent variables and just updates the
-                backwards vectors to imitate the prior, 
+                backwards vectors to imitate the prior
                 '''
 
                 mu_posterior = mu_posterior + mu_prior
@@ -225,5 +225,7 @@ class StochasticWavenet(nn.Module):
         final = self.final2(F.relu(final))
         # make sure last dimension is number of channels
         final = final.permute(0, 2, 1)
-        outputs = tanh(self.outputs(final))
+        outputs = self.outputs(final)
+        if apply_tanh:
+            outputs = tanh(outputs)
         return [outputs, kld_loss]
